@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Login - Casino Royale</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body {
+    background: linear-gradient(135deg, #0f0f19 0%, #282b38 100%);
+    font-family: 'Roboto', sans-serif;
+    color: #f5e58f;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    user-select: none;
+    margin: 0;
+  }
+  .login-container {
+    background: #1a1b29;
+    padding: 40px 60px;
+    border-radius: 32px;
+    box-shadow: 0 0 60px 15px #d7c859aa;
+    text-align: center;
+    width: 320px;
+  }
+  .login-container h1 {
+    margin-bottom: 30px;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 2.6rem;
+    text-shadow: 0 0 20px #d7c859cc;
+  }
+  .login-container input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 1.3rem;
+    border-radius: 60px;
+    border: none;
+    margin-bottom: 24px;
+    outline: none;
+    font-weight: 700;
+    box-shadow: inset 0 0 30px #fffacdcc;
+    background: #292d3d;
+    color: #f5e58f;
+  }
+  .login-container button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #19191a;
+    background: #d7c859;
+    border: none;
+    border-radius: 60px;
+    cursor: pointer;
+    box-shadow: 0 0 40px 15px #d7c859cc;
+    transition: background 0.3s ease;
+  }
+  .login-container button:hover {
+    background: #fffacd;
+  }
+  #error {
+    color: #ff4d4d;
+    font-weight: 700;
+    margin-top: -18px;
+    margin-bottom: 12px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>Login</h1>
+    <input type="text" id="username" placeholder="Enter your username" autocomplete="off" />
+    <div id="error">Please enter a username</div>
+    <button id="loginBtn">Enter Casino</button>
+  </div>
+
+<script>
+  const loginBtn = document.getElementById('loginBtn');
+  const usernameInput = document.getElementById('username');
+  const errorMsg = document.getElementById('error');
+
+  loginBtn.addEventListener('click', () => {
+    const username = usernameInput.value.trim();
+    if (username.length > 0) {
+      localStorage.setItem('casinoUser', username);
+      if (!localStorage.getItem('casinoBalance')) {
+        localStorage.setItem('casinoBalance', 1000);
+      }
+      window.location.href = 'index.html';
+    } else {
+      errorMsg.style.display = 'block';
+    }
+  });
+
+  usernameInput.addEventListener('input', () => {
+    errorMsg.style.display = 'none';
+  });
+
+  usernameInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') loginBtn.click();
+  });
+</script>
+</body>
+</html>

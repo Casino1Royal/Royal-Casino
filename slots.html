@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slots - Casino Royale</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body.fade-out {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .slots-reels {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin: 40px 0 20px 0;
+  }
+  .slot-reel {
+    background: #1a1b29;
+    border-radius: 15px;
+    box-shadow:
+      inset 0 0 20px #d7c859aa,
+      0 0 20px #d7c859aa;
+    width: 90px;
+    height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 3rem;
+    color: #f5e58f;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+  .slot-reel.spin {
+    animation: spin-reel 0.7s linear infinite;
+  }
+  @keyframes spin-reel {
+    0% {transform: translateY(0);}
+    50% {transform: translateY(-40px);}
+    100% {transform: translateY(0);}
+  }
+  .slots-controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .slots-message {
+    color: #d7c859;
+    text-align: center;
+    margin-top: 24px;
+    font-size: 1.4rem;
+  }
+</style>
+</head>
+<body>
+  <header class="casino-header">
+    <h1>Casino Royale</h1>
+    <nav class="nav-tabs">
+      <button class="tab-button" data-link="index.html">Home</button>
+      <button class="tab-button" data-link="blackjack.html">Blackjack</button>
+      <button class="tab-button" data-link="roulette.html">Roulette</button>
+      <button class="tab-button active" data-link="slots.html">Slots</button>
+    </nav>
+    <div class="balance-container" id="balance-display">Balance: $1000</div>
+  </header>
+
+  <main class="casino-container slots-container">
+    <div class="slots-reels" id="slots-reels">
+      <div class="slot-reel" id="reel1">🍒</div>
+      <div class="slot-reel" id="reel2">🍋</div>
+      <div class="slot-reel" id="reel3">🍊</div>
+    </div>
+    <div class="slots-controls">
+      <label class="bet-label" for="bet-input">Bet ($):</label>
+      <input class="bet-input" type="number" id="bet-input" min="1" max="1000" value="10" />
+      <button class="all-in-btn" id="all-in-btn">ALL IN</button>
+      <button class="btn primary-btn" id="spin-btn">Spin</button>
+      <button class="btn tertiary-btn" id="reset-btn">Reset</button>
+    </div>
+    <div class="slots-message" id="message-area"></div>
+  </main>
+
+<script>
+  // Navigation fade animation
+  document.querySelectorAll('.tab-button[data-link]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      if (btn.classList.contains('active')) return;
+      document.body.classList.add('fade-out');
+      setTimeout(() => {
+        window.location.href = btn.getAttribute('data-link');
+      }, 600);
+    });
+  });
+
+  (() => {
+    const balanceDisplay = document.getElementById('balance-display');
+    const messageArea = document.getElementById('message-area');
+    const betInput = document.getElementById('bet-input');
+    const allInBtn = document.getElementById('all-in-btn');
+    const spinBtn = document.getElementById('spin-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    const reelElements = [
+      document.getElementById('reel1'),
+      document.getElementById('reel2'),
+      document.getElementById('reel3')
+    ];
+
+    const symbols = ['🍒','🍋','🍊','🍉','⭐','7️⃣','🍇'];
+
+    let balance = parseInt(localStorage.getItem('casinoBalance')) || 1000;
+
+    function updateBalanceDisplay() {
+      balanceDisplay.textContent = `Balance: $${balance}`;
+      localStorage.setItem('casinoBalance', balance);
+    }
+
+    function getRandomSymbol() {
+      return symbols[Math.floor(Math.random() * symbols.length)];
+    }
+
+    function spinSlots() {
+      let bet = parseInt(betInput.value);
+      if (isNaN(bet) || bet < 1) {
+        messageArea.textContent = 'Please enter a valid bet.';
+        return;
+      }
+      if (bet > balance) {
+        messageArea.textContent = "You don't have enough balance.";
+        return;
+      }
+      messageArea.textContent = '';
+      spinBtn.disabled = true;
+      betInput.disabled = true;
+      allInBtn.disabled = true;
+
+      // Animate reels spinning
+      reelElements.forEach((el) => el.classList.add('spin'));
+
+      setTimeout(() => {
+        reelElements.forEach((el) => el.classList.remove('spin'));
+        // Assign final random symbols
+        const results = reelElements.map(() => getRandomSymbol());
+
+        for (let i=0; i<reelElements.length; i++) {
+          reelElements[i].textContent = results[i];
+        }
+
+        // Determine payout
+        let payout = 0;
+        if (results[0] === results[1] && results[1] === results[2]) {
+          payout = bet * 10;
+          messageArea.textContent = `JACKPOT! You won $${payout}!`;
+        } else if (results[0] === results[1] || results[1] === results[2] || results[0] === results[2]) {
+          payout = bet * 2;
+          messageArea.textContent = `Nice! You won $${payout}!`;
+        } else {
+          payout = 0;
+          messageArea.textContent = "No win this time. Try again!";
+        }
+
+        balance += payout - bet;
+        updateBalanceDisplay();
+
+        spinBtn.disabled = false;
+        betInput.disabled = false;
+        allInBtn.disabled = false;
+      }, 1400);
+    }
+
+    resetBtn.addEventListener('click', () => {
+      balance = 1000;
+      updateBalanceDisplay();
+      messageArea.textContent = 'Balance reset to $1000.';
+    });
+
+    allInBtn.addEventListener('click', () => {
+      betInput.value = balance;
+    });
+
+    spinBtn.addEventListener('click', spinSlots);
+
+    updateBalanceDisplay();
+
+    // === NEW BALANCE & LOGIN SYNC CODE BELOW ===
+    (function() {
+      const currentUser = localStorage.getItem('casinoUser');
+      if (!currentUser) {
+        window.location.href = 'login.html';
+        return;
+      }
+      const balanceKey = `casinoBalance_${currentUser}`;
+
+      // Load user-specific balance or init it
+      let userBalance = parseInt(localStorage.getItem(balanceKey));
+      if (isNaN(userBalance)) {
+        userBalance = 1000;
+        localStorage.setItem(balanceKey, userBalance);
+      }
+      balance = userBalance;
+      updateBalanceDisplay();
+
+      // Override updateBalance to store per-user balance
+      window.updateBalance = function(newBalance) {
+        balance = newBalance;
+        localStorage.setItem(balanceKey, balance);
+        updateBalanceDisplay();
+      };
+    })();
+
+  })();
+</script>
+
+</body>
+</html>

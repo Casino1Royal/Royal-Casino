@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roulette - Casino Royale</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body.fade-out {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+</style>
+</head>
+<body>
+  <header class="casino-header">
+    <h1>Casino Royale</h1>
+    <nav class="nav-tabs">
+      <button class="tab-button" data-link="index.html">Home</button>
+      <button class="tab-button" data-link="blackjack.html">Blackjack</button>
+      <button class="tab-button active" data-link="roulette.html">Roulette</button>
+      <button class="tab-button" data-link="slots.html">Slots</button>
+    </nav>
+    <div class="balance-container" id="balance-display">Balance: $1000</div>
+  </header>
+
+  <main class="casino-container roulette-area">
+    <div class="roulette-wheel-container">
+      <canvas id="roulette-wheel" width="360" height="360"></canvas>
+      <button class="btn primary-btn" id="spin-wheel-btn">Spin</button>
+    </div>
+    <form class="roulette-bets" id="roulette-bet-form">
+      <fieldset class="roulette-bet-options">
+        <legend>Choose Your Bet:</legend>
+        <label><input type="radio" name="bet" value="red" /> Red</label>
+        <label><input type="radio" name="bet" value="black" /> Black</label>
+        <label><input type="radio" name="bet" value="even" /> Even</label>
+        <label><input type="radio" name="bet" value="odd" /> Odd</label>
+        <label><input type="radio" name="bet" value="1-18" /> 1-18</label>
+        <label><input type="radio" name="bet" value="19-36" /> 19-36</label>
+        <label><input type="radio" name="bet" value="0" /> 0</label>
+      </fieldset>
+      <label for="bet-input" class="bet-label">Bet ($):</label>
+      <input class="bet-input" type="number" id="bet-input" min="1" max="1000" value="10" />
+      <button class="all-in-btn" type="button" id="all-in-btn">ALL IN</button>
+    </form>
+    <div class="message-area" id="message-area"></div>
+  </main>
+
+<script>
+  // Navigation fade animation
+  document.querySelectorAll('.tab-button[data-link]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      if (btn.classList.contains('active')) return;
+      document.body.classList.add('fade-out');
+      setTimeout(() => {
+        window.location.href = btn.getAttribute('data-link');
+      }, 600);
+    });
+  });
+
+  (() => {
+    const balanceDisplay = document.getElementById('balance-display');
+    const messageArea = document.getElementById('message-area');
+    const betInput = document.getElementById('bet-input');
+    const allInBtn = document.getElementById('all-in-btn');
+    const spinBtn = document.getElementById('spin-wheel-btn');
+    const betForm = document.getElementById('roulette-bet-form');
+
+    // Initialize balance; this will be overridden below
+    let balance = parseInt(localStorage.getItem('casinoBalance')) || 1000;
+    let currentBet = 0;
+    let currentBetType = null;
+    let spinning = false;
+
+    const numbers = [
+      0, 32, 15, 19, 4, 21, 2, 25, 17,
+      34, 6, 27, 13, 36, 11, 30, 8, 23,
+      10, 5, 24, 16, 33, 1, 20, 14, 31,
+      9, 22, 18, 29, 7, 28, 12, 35, 3, 26
+    ];
+    const redNumbers = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+    const blackNumbers = new Set(numbers.filter(n => n !==0 && !redNumbers.has(n)));
+
+    const canvas = document.getElementById('roulette-wheel');
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width/2;
+    const centerY = canvas.height/2;
+    const radius = 150;
+
+    function drawWheel(rotation=0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rotation);
+
+      const sliceAngle = 2 * Math.PI / numbers.length;
+
+      for(let i=0; i<numbers.length; i++) {
+        const startAngle = i * sliceAngle;
+        const isRed = redNumbers.has(numbers[i]);
+        ctx.beginPath();
+        ctx.fillStyle = isRed ? '#d73c3c' : (numbers[i]===0 ? '#228B22' : '#111');
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 2;
+        ctx.moveTo(0,0);
+        ctx.arc(0, 0, radius, startAngle, startAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Number text
+        ctx.save();
+        ctx.fillStyle = '#f5e58f';
+        ctx.font = 'bold 18px Arial';
+        ctx.rotate(startAngle + sliceAngle / 2);
+        ctx.translate(radius * 0.8, 0);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillText(numbers[i], -ctx.measureText(numbers[i]).width / 2, 0);
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // Draw pointer
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY - radius - 15);
+      ctx.lineTo(centerX - 10, centerY - radius + 10);
+      ctx.lineTo(centerX + 10, centerY - radius + 10);
+      ctx.closePath();
+      ctx.fillStyle = '#f5e58f';
+      ctx.fill();
+      ctx.shadowColor = '#d7c859';
+      ctx.shadowBlur = 12;
+    }
+
+    function spinWheel() {
+      if (spinning) return;
+      currentBet = parseInt(betInput.value);
+      if (isNaN(currentBet) || currentBet < 1) {
+        messageArea.textContent = 'Bet must be at least $1';
+        return;
+      }
+      if (currentBet > balance) {
+        messageArea.textContent = 'Not enough balance';
+        return;
+      }
+      const formData = new FormData(betForm);
+      currentBetType = formData.get('bet');
+      if (!currentBetType) {
+        messageArea.textContent = 'Please select a bet type';
+        return;
+      }
+      spinning = true;
+      messageArea.textContent = '';
+      betInput.disabled = true;
+      allInBtn.disabled = true;
+      spinBtn.disabled = true;
+
+      let rotation = 0;
+      let spinTime = 0;
+      const maxSpinTime = 4000 + Math.random() * 3000;
+      const totalRotations = 10 + Math.floor(Math.random()*10);
+
+      function animate() {
+        spinTime += 16;
+        const t = spinTime / maxSpinTime;
+        const eased = 1 - Math.pow(1 - t, 3);
+        rotation += (0.3 + eased * 0.5);
+        if (spinTime >= maxSpinTime) {
+          spinning = false;
+          determineResult(rotation);
+          betInput.disabled = false;
+          allInBtn.disabled = false;
+          spinBtn.disabled = false;
+          return;
+        }
+        drawWheel(rotation);
+        requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    function determineResult(rotation) {
+      const sliceAngle = 2 * Math.PI / numbers.length;
+      // Normalize rotation between 0 and 2PI
+      const normalizedRotation = rotation % (2 * Math.PI);
+      // Find winning slice index
+      const index = Math.floor((2 * Math.PI - normalizedRotation) / sliceAngle) % numbers.length;
+      const winningNumber = numbers[index];
+
+      let win = false;
+      let payout = 0;
+
+      switch(currentBetType) {
+        case 'red':
+          win = redNumbers.has(winningNumber);
+          payout = 2;
+          break;
+        case 'black':
+          win = blackNumbers.has(winningNumber);
+          payout = 2;
+          break;
+        case 'even':
+          win = winningNumber !== 0 && winningNumber % 2 === 0;
+          payout = 2;
+          break;
+        case 'odd':
+          win = winningNumber % 2 === 1;
+          payout = 2;
+          break;
+        case '1-18':
+          win = winningNumber >= 1 && winningNumber <= 18;
+          payout = 2;
+          break;
+        case '19-36':
+          win = winningNumber >= 19 && winningNumber <= 36;
+          payout = 2;
+          break;
+        case '0':
+          win = winningNumber === 0;
+          payout = 35;
+          break;
+      }
+
+      if (win) {
+        balance += currentBet * (payout - 1);
+        messageArea.textContent = `Number ${winningNumber} - You win $${currentBet * payout}!`;
+      } else {
+        balance -= currentBet;
+        messageArea.textContent = `Number ${winningNumber} - You lose $${currentBet}.`;
+      }
+      updateBalance(balance);
+      updateBalanceDisplay();
+    }
+
+    function updateBalanceDisplay() {
+      balanceDisplay.textContent = `Balance: $${balance}`;
+    }
+
+    allInBtn.addEventListener('click', () => {
+      betInput.value = balance;
+    });
+
+    spinBtn.addEventListener('click', spinWheel);
+
+    updateBalanceDisplay();
+    drawWheel(0);
+
+    // === NEW BALANCE & LOGIN SYNC CODE BELOW ===
+    (function() {
+      const currentUser = localStorage.getItem('casinoUser');
+      if (!currentUser) {
+        window.location.href = 'login.html';
+        return;
+      }
+      const balanceKey = `casinoBalance_${currentUser}`;
+
+      // Load user-specific balance or init it
+      let userBalance = parseInt(localStorage.getItem(balanceKey));
+      if (isNaN(userBalance)) {
+        userBalance = 1000;
+        localStorage.setItem(balanceKey, userBalance);
+      }
+      balance = userBalance;
+      updateBalanceDisplay();
+
+      // Override updateBalance to store per-user balance
+      window.updateBalance = function(newBalance) {
+        balance = newBalance;
+        localStorage.setItem(balanceKey, balance);
+        updateBalanceDisplay();
+      };
+    })();
+
+  })();
+</script>
+</body>
+</html>

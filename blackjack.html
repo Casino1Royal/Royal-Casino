@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blackjack - Casino Royale</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body.fade-out {
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+</style>
+</head>
+<body>
+  <header class="casino-header">
+    <h1>Casino Royale</h1>
+    <nav class="nav-tabs">
+      <button class="tab-button" data-link="index.html">Home</button>
+      <button class="tab-button active" data-link="blackjack.html">Blackjack</button>
+      <button class="tab-button" data-link="roulette.html">Roulette</button>
+      <button class="tab-button" data-link="slots.html">Slots</button>
+    </nav>
+    <div class="balance-container" id="balance-display">Balance: $1000</div>
+  </header>
+
+  <main class="casino-container">
+    <div class="table-area">
+      <section class="dealer-area">
+        <h2>Dealer</h2>
+        <div class="cards" id="dealer-cards"></div>
+        <div class="score" id="dealer-score"></div>
+      </section>
+
+      <section class="player-area">
+        <h2>Player</h2>
+        <div class="cards" id="player-cards"></div>
+        <div class="score" id="player-score"></div>
+      </section>
+    </div>
+
+    <div class="controls-area">
+      <div class="bet-area">
+        <label class="bet-label" for="bet-input">Bet ($):</label>
+        <input class="bet-input" type="number" id="bet-input" min="1" max="1000" value="10" />
+        <button class="all-in-btn" id="all-in-btn">ALL IN</button>
+      </div>
+
+      <div class="buttons-row">
+        <button class="btn primary-btn" id="deal-btn">Deal</button>
+        <button class="btn secondary-btn" id="hit-btn" disabled>Hit</button>
+        <button class="btn secondary-btn" id="stand-btn" disabled>Stand</button>
+        <button class="btn tertiary-btn" id="reset-btn">Reset</button>
+      </div>
+
+      <div class="message-area" id="message-area"></div>
+      <div class="chips-container" id="chips-container"></div>
+    </div>
+  </main>
+
+<script>
+  // Navigation fade animation
+  document.querySelectorAll('.tab-button[data-link]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      if (btn.classList.contains('active')) return;
+      document.body.classList.add('fade-out');
+      setTimeout(() => {
+        window.location.href = btn.getAttribute('data-link');
+      }, 600);
+    });
+  });
+
+  // Game logic
+
+  (() => {
+    const balanceDisplay = document.getElementById('balance-display');
+    const dealerCardsEl = document.getElementById('dealer-cards');
+    const playerCardsEl = document.getElementById('player-cards');
+    const dealerScoreEl = document.getElementById('dealer-score');
+    const playerScoreEl = document.getElementById('player-score');
+    const messageArea = document.getElementById('message-area');
+    const chipsContainer = document.getElementById('chips-container');
+    const betInput = document.getElementById('bet-input');
+    const allInBtn = document.getElementById('all-in-btn');
+    const dealBtn = document.getElementById('deal-btn');
+    const hitBtn = document.getElementById('hit-btn');
+    const standBtn = document.getElementById('stand-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    // NOTE: balance initialized here, but we will override it from user data below
+    let balance = parseInt(localStorage.getItem('casinoBalance')) || 1000;
+    let currentBet = 0;
+
+    let deck = [];
+    let dealerHand = [];
+    let playerHand = [];
+    let gameActive = false;
+
+    const suits = ['♠', '♥', '♦', '♣'];
+    const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+    function updateBalanceDisplay() {
+      balanceDisplay.textContent = `Balance: $${balance}`;
+      // Save user-specific balance (see below)
+    }
+
+    function createDeck() {
+      deck = [];
+      for (const suit of suits) {
+        for (const rank of ranks) {
+          deck.push({suit, rank});
+        }
+      }
+      shuffle(deck);
+    }
+
+    function shuffle(array) {
+      for (let i = array.length -1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i+1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function cardToString(card) {
+      return `${card.rank}${card.suit}`;
+    }
+
+    function calculateScore(hand) {
+      let score = 0;
+      let aces = 0;
+      for (const card of hand) {
+        if (card.rank === 'A') {
+          aces++;
+          score += 11;
+        } else if (['J','Q','K'].includes(card.rank)) {
+          score += 10;
+        } else {
+          score += parseInt(card.rank);
+        }
+      }
+      while (score > 21 && aces > 0) {
+        score -= 10;
+        aces--;
+      }
+      return score;
+    }
+
+    function renderHand(container, hand, hideFirstCard = false) {
+      container.innerHTML = '';
+      hand.forEach((card, i) => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'card';
+        if (hideFirstCard && i === 0) {
+          cardDiv.classList.add('card-back');
+          cardDiv.textContent = '';
+        } else {
+          cardDiv.textContent = cardToString(card);
+        }
+        container.appendChild(cardDiv);
+      });
+    }
+
+    function showMessage(msg) {
+      messageArea.textContent = msg;
+    }
+
+    function clearMessage() {
+      messageArea.textContent = '';
+    }
+
+    function resetGame() {
+      currentBet = 0;
+      gameActive = false;
+      dealerHand = [];
+      playerHand = [];
+      betInput.disabled = false;
+      allInBtn.disabled = false;
+      dealBtn.disabled = false;
+      hitBtn.disabled = true;
+      standBtn.disabled = true;
+      clearMessage();
+      renderHand(dealerCardsEl, []);
+      renderHand(playerCardsEl, []);
+      dealerScoreEl.textContent = '';
+      playerScoreEl.textContent = '';
+      updateBalanceDisplay();
+    }
+
+    function animateChips(amount) {
+      for (let i = 0; i < 10; i++) {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.style.left = (Math.random() * 200) + 'px';
+        chip.style.animationDelay = (i * 0.1) + 's';
+        chipsContainer.appendChild(chip);
+        setTimeout(() => chip.remove(), 1500);
+      }
+    }
+
+    function updateScores(hideDealerCard) {
+      playerScoreEl.textContent = `Score: ${calculateScore(playerHand)}`;
+      if (hideDealerCard) {
+        dealerScoreEl.textContent = 'Score: ?';
+      } else {
+        dealerScoreEl.textContent = `Score: ${calculateScore(dealerHand)}`;
+      }
+    }
+
+    function endRound() {
+      const playerScore = calculateScore(playerHand);
+      const dealerScore = calculateScore(dealerHand);
+
+      let result = '';
+      if (playerScore > 21) {
+        result = 'Bust! You lose.';
+        balance -= currentBet;
+      } else if (dealerScore > 21) {
+        result = 'Dealer busts! You win!';
+        balance += currentBet;
+        animateChips(currentBet);
+      } else if (playerScore > dealerScore) {
+        result = 'You win!';
+        balance += currentBet;
+        animateChips(currentBet);
+      } else if (playerScore < dealerScore) {
+        result = 'You lose.';
+        balance -= currentBet;
+      } else {
+        result = 'Push (tie). Bet returned.';
+      }
+      updateBalance(balance);
+      showMessage(result);
+      betInput.disabled = false;
+      allInBtn.disabled = false;
+      dealBtn.disabled = false;
+      hitBtn.disabled = true;
+      standBtn.disabled = true;
+      gameActive = false;
+    }
+
+    dealBtn.addEventListener('click', () => {
+      currentBet = parseInt(betInput.value);
+      if (isNaN(currentBet) || currentBet < 1) {
+        showMessage('Please enter a valid bet of at least $1');
+        return;
+      }
+      if (currentBet > balance) {
+        showMessage("You don't have enough balance");
+        return;
+      }
+
+      createDeck();
+      playerHand = [deck.pop(), deck.pop()];
+      dealerHand = [deck.pop(), deck.pop()];
+
+      renderHand(playerCardsEl, playerHand);
+      renderHand(dealerCardsEl, dealerHand, true);
+
+      updateScores(true);
+
+      clearMessage();
+
+      gameActive = true;
+      betInput.disabled = true;
+      allInBtn.disabled = true;
+      dealBtn.disabled = false; // keep enabled to allow reset only by reset button
+      hitBtn.disabled = false;
+      standBtn.disabled = false;
+    });
+
+    hitBtn.addEventListener('click', () => {
+      if (!gameActive) return;
+
+      playerHand.push(deck.pop());
+      renderHand(playerCardsEl, playerHand);
+      updateScores(true);
+
+      if (calculateScore(playerHand) > 21) {
+        renderHand(dealerCardsEl, dealerHand, false);
+        updateScores(false);
+        endRound();
+      }
+    });
+
+    standBtn.addEventListener('click', () => {
+      if (!gameActive) return;
+
+      renderHand(dealerCardsEl, dealerHand, false);
+      updateScores(false);
+
+      while (calculateScore(dealerHand) < 17) {
+        dealerHand.push(deck.pop());
+        renderHand(dealerCardsEl, dealerHand);
+        updateScores(false);
+      }
+
+      endRound();
+    });
+
+    resetBtn.addEventListener('click', resetGame);
+    allInBtn.addEventListener('click', () => {
+      betInput.value = balance;
+    });
+
+    // Initial call to reset game UI
+    resetGame();
+
+    // === NEW BALANCE & LOGIN SYNC CODE BELOW ===
+    (function() {
+      const currentUser = localStorage.getItem('casinoUser');
+      if (!currentUser) {
+        window.location.href = 'login.html';
+        return;
+      }
+      const balanceKey = `casinoBalance_${currentUser}`;
+
+      // Load user-specific balance or init it
+      let userBalance = parseInt(localStorage.getItem(balanceKey));
+      if (isNaN(userBalance)) {
+        userBalance = 1000;
+        localStorage.setItem(balanceKey, userBalance);
+      }
+      balance = userBalance;
+      updateBalanceDisplay();
+
+      // Override updateBalance to store per-user balance
+      window.updateBalance = function(newBalance) {
+        balance = newBalance;
+        localStorage.setItem(balanceKey, balance);
+        updateBalanceDisplay();
+      };
+    })();
+  })();
+</script>
+
+</body>
+</html>
