@@ -78,6 +78,7 @@
 </style>
 </head>
 <body>
+  
   <header class="casino-header">
     <h1>Casino Royale</h1>
     <nav class="nav-tabs">
@@ -168,5 +169,52 @@
     });
   }
 </script>
+
+<iframe id="musicFrame" src="music.html" style="display:none;"></iframe>
+<button id="toggleMusicBtn" style="position:fixed;top:16px;right:16px;padding:10px 14px;font-size:1.4rem;border:none;border-radius:10px;background:#d7c859;color:#000;cursor:pointer;z-index:10000;">
+  🔊
+</button>
+
+<script>
+  const toggleBtn = document.getElementById('toggleMusicBtn');
+
+  // Set initial icon based on localStorage value
+  const musicMuted = localStorage.getItem('musicMuted');
+  toggleBtn.textContent = musicMuted === 'true' ? '🔇' : '🔊';
+
+  toggleBtn.addEventListener('click', () => {
+    const frame = document.getElementById('musicFrame');
+    frame.contentWindow.postMessage('toggle', '*');
+
+    // Toggle the icon right away (it'll also reset correctly on page reload)
+    toggleBtn.textContent = toggleBtn.textContent === '🔊' ? '🔇' : '🔊';
+  });
+</script>
+
+<!-- RANDOM TIP UNDER BALANCE -->
+<script>
+  (function() {
+    const tips = [
+      "Tip: Always know when to stand!",
+      "Fun fact: Roulette wheels have 37 or 38 pockets.",
+      "Tip: Manage your balance carefully!",
+      "Fun fact: The term 'blackjack' comes from a special bonus payout.",
+      "Tip: Betting strategies don’t guarantee wins, play responsibly."
+    ];
+    const tip = tips[Math.floor(Math.random() * tips.length)];
+
+    const balanceEl = document.getElementById('balance-display');
+    if (balanceEl) {
+      const tipEl = document.createElement('div');
+      tipEl.style.fontSize = '0.85rem';
+      tipEl.style.color = '#d7c859cc';
+      tipEl.style.marginTop = '4px';
+      tipEl.style.fontStyle = 'italic';
+      tipEl.textContent = tip;
+      balanceEl.parentNode.insertBefore(tipEl, balanceEl.nextSibling);
+    }
+  })();
+</script>
+
 </body>
 </html>

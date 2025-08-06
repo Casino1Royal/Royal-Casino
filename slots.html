@@ -56,6 +56,7 @@
 </style>
 </head>
 <body>
+
   <header class="casino-header">
     <h1>Casino Royale</h1>
     <nav class="nav-tabs">
@@ -212,6 +213,54 @@
     })();
 
   })();
+</script>
+<iframe id="musicFrame" src="music.html" style="display:none;"></iframe>
+<button id="toggleMusicBtn" style="position:fixed;top:16px;right:16px;padding:10px 14px;font-size:1.4rem;border:none;border-radius:10px;background:#d7c859;color:#000;cursor:pointer;z-index:10000;">
+  🔊
+</button>
+
+<script>
+  const toggleBtn = document.getElementById('toggleMusicBtn');
+
+  // Set initial icon based on localStorage value
+  const musicMuted = localStorage.getItem('musicMuted');
+  toggleBtn.textContent = musicMuted === 'true' ? '🔇' : '🔊';
+
+  toggleBtn.addEventListener('click', () => {
+    const frame = document.getElementById('musicFrame');
+    frame.contentWindow.postMessage('toggle', '*');
+
+    // Toggle the icon right away (it'll also reset correctly on page reload)
+    toggleBtn.textContent = toggleBtn.textContent === '🔊' ? '🔇' : '🔊';
+  });
+</script>
+<script>
+  // Only activate shortcuts if page is slots.html (optional but safe)
+  if (window.location.pathname.endsWith('slots.html')) {
+    document.addEventListener('keydown', (e) => {
+      // Example shortcuts for slots:
+      // Space: Spin
+      // R: Reset
+      // B: Bet max (or increase bet)
+      
+      if (e.target.tagName === 'INPUT' || e.target.isContentEditable) return; // ignore inputs
+
+      switch(e.key.toLowerCase()) {
+        case ' ':
+          e.preventDefault();
+          document.getElementById('spin-btn')?.click();
+          break;
+        case 'r':
+          e.preventDefault();
+          document.getElementById('reset-btn')?.click();
+          break;
+        case 'b':
+          e.preventDefault();
+          document.getElementById('bet-max-btn')?.click();
+          break;
+      }
+    });
+  }
 </script>
 
 </body>

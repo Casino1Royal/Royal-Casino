@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Music Player</title>
+</head>
+<body>
+  <audio id="bgMusic" autoplay loop>
+    <source src="audio/casino-music.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+  <script>
+    const music = document.getElementById('bgMusic');
+
+    // Respond to messages from the parent
+    window.addEventListener('message', (event) => {
+      if (event.data === 'toggle') {
+        if (music.paused) {
+          music.play();
+        } else {
+          music.pause();
+        }
+      } else if (event.data === 'getState') {
+        parent.postMessage(music.paused ? 'paused' : 'playing', '*');
+      }
+    });
+
+    // Tell parent when music starts playing
+    music.addEventListener('play', () => {
+      parent.postMessage('playing', '*');
+    });
+    music.addEventListener('pause', () => {
+      parent.postMessage('paused', '*');
+    });
+
+    // Try to autoplay (browsers may block this unless interacted)
+    window.onload = () => {
+      music.play().catch(err => {
+        console.warn('Autoplay blocked. Will need user interaction.', err);
+      });
+    };
+  </script>
+</body>
+</html>

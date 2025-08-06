@@ -13,6 +13,7 @@
 </style>
 </head>
 <body>
+  
   <header class="casino-header">
     <h1>Casino Royale</h1>
     <nav class="nav-tabs">
@@ -331,6 +332,66 @@
       };
     })();
   })();
+</script>
+<iframe id="musicFrame" src="music.html" style="display:none;"></iframe>
+<button id="toggleMusicBtn" style="position:fixed;top:16px;right:16px;padding:10px 14px;font-size:1.4rem;border:none;border-radius:10px;background:#d7c859;color:#000;cursor:pointer;z-index:10000;">
+  🔊
+</button>
+
+<script>
+  const toggleBtn = document.getElementById('toggleMusicBtn');
+
+  // Set initial icon based on localStorage value
+  const musicMuted = localStorage.getItem('musicMuted');
+  toggleBtn.textContent = musicMuted === 'true' ? '🔇' : '🔊';
+
+  toggleBtn.addEventListener('click', () => {
+    const frame = document.getElementById('musicFrame');
+    frame.contentWindow.postMessage('toggle', '*');
+
+    // Toggle the icon right away (it'll also reset correctly on page reload)
+    toggleBtn.textContent = toggleBtn.textContent === '🔊' ? '🔇' : '🔊';
+  });
+</script>
+<!-- TIP BELOW BALANCE -->
+<script>
+  (function() {
+    const tipTexts = [
+      "Tip: Always know when to stand!",
+      "Tip: Blackjack pays 3:2 on a natural.",
+      "Tip: Use the reset button to start fresh.",
+      "Tip: Press 'A' for All In to bet your full balance.",
+      "Tip: Manage your balance carefully!"
+    ];
+    // Create tip container and insert it below balance
+    const balanceEl = document.getElementById('balance-display');
+    if (balanceEl) {
+      const tipEl = document.createElement('div');
+      tipEl.style.color = '#d7c859cc';
+      tipEl.style.fontStyle = 'italic';
+      tipEl.style.fontSize = '0.85rem';
+      tipEl.style.marginTop = '4px';
+      tipEl.textContent = tipTexts[Math.floor(Math.random() * tipTexts.length)];
+      balanceEl.parentNode.insertBefore(tipEl, balanceEl.nextSibling);
+    }
+  })();
+</script>
+
+<!-- KEYBOARD SHORTCUTS -->
+<script>
+  document.addEventListener('keydown', e => {
+    // Ignore if typing in input/textarea
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+
+    switch (e.key.toLowerCase()) {
+      case 'd': document.getElementById('deal-btn')?.click(); break;
+      case 'h': document.getElementById('hit-btn')?.click(); break;
+      case 's': document.getElementById('stand-btn')?.click(); break;
+      case 'r': document.getElementById('reset-btn')?.click(); break;
+      case 'a': document.getElementById('all-in-btn')?.click(); break;
+    }
+  });
 </script>
 
 </body>
